@@ -1,7 +1,7 @@
 import { Snowflake } from "../internal/Snowflake";
 import { QueryResult } from "./QueryResult";
 import { SQLCommand } from "../internal/SqlCommand";
-import { StateManager } from "../procedure/StateManager";
+import { StateManager } from "./StateManager";
 
 declare var snowflake: Snowflake;
 

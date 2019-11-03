@@ -1,5 +1,5 @@
-import { State } from "./State";
-import { SnowflakeClient } from "../core/SnowflakeClient";
+import { State } from './State';
+import { SnowflakeClient } from "./SnowflakeClient";
 
 export class StateManager {
     state: State;
