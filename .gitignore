@@ -1,2 +1,5 @@
-built/**/*
-built/*
+built
+node_modules
+packed
+dist
+.vscode

@@ -1,0 +1,25 @@
+{
+  "name": "snowflakeproc",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "dependencies": {
+    "fs": "^0.0.1-security",
+    "glob": "^7.1.5",
+    "process": "^0.11.10",
+    "ts-morph": "^4.3.2",
+    "typescript": "^3.6.4",
+    "typescript-compiler": "^1.4.1-2"
+  },
+  "devDependencies": {
+    "gulp": "^4.0.2",
+    "gulp-rollup": "^2.16.2",
+    "typedoc": "^0.15.0",
+    "typedoc-plugin-markdown": "^2.2.11"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

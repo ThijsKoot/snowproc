@@ -1,22 +1,17 @@
-export interface InternalResultSet {
+import { ResultSet } from "./ResultSet";
 
-    getColumnCount() : number;
-    
+export interface Statement {
+
+    execute(): ResultSet;
+
+    getColumnCount(): number;
+    getRowCount(): number;
+
     getColumnName(index: number): string;
-
     getColumnScale(index: number): any;
 
     getColumnSqlType(index: number): string;
     getColumnSqlType(name: string): string;
-
-    getColumnType(index: number): string;
-    getColumnType(name: string): string;
-
-    getColumnValue(index: number): string,
-    getColumnValue(name: string): string,
-
-    getColumnValueAsString(index: number): string;
-    getColumnValueAsString(name: string): string;
 
     getQueryId(): string;
 
@@ -31,6 +26,4 @@ export interface InternalResultSet {
     isColumnTime(index: number): boolean;
     isColumnTimestamp(index: number): boolean;
     isColumnVariant(index: number): boolean;
-
-    next(): boolean;
 }
