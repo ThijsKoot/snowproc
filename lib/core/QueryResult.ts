@@ -151,7 +151,7 @@ export class QueryResult<T = any> implements IterableIterator<T> {
             done: true,
             value: null
         }
-    };
+    }
 
     /**
      * Retrieve column names from internal result set

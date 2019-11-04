@@ -4,13 +4,14 @@ import { ProcedureDefinition } from "./ProcedureDefinition";
 import { writeFile, writeFileSync } from "fs";
 import { TypeMap } from "./Typemap";
 import * as fs from 'fs';
+import { Rights } from "../procedure/Rights";
 
 export class ProcedureCompiler {
 
-    findImplementingClasses = (sourcefiles: SourceFile[], baseClass: string) => 
+    findImplementingClasses = (sourcefiles: SourceFile[], baseClass: string) =>
         sourcefiles.map(file => file.getClasses())
             .reduce((flat, arr) => flat.concat(arr), new Array<ClassDeclaration>())
-            .filter(c => c.getBaseClass() !== undefined 
+            .filter(c => c.getBaseClass() !== undefined
                 && c.getBaseClass().getName() === baseClass);
 
     compile(tsconfig: string) {
@@ -22,11 +23,12 @@ export class ProcedureCompiler {
         });
 
         let sourceFiles = sourceProject.getSourceFiles();
+
         let internals = new Array<string>();
-        
+
         for (let item of ['internal', 'core', 'procedure']) {
             const folder = `lib/${item}`;
-            
+
             fs.readdirSync(folder)
                 .filter(f => !f.endsWith('.d.ts'))
                 .map(f => `${folder}/${f}`)
@@ -36,7 +38,14 @@ export class ProcedureCompiler {
 
         // find implementations of procedure classes
         let procImplementations = this.findImplementingClasses(sourceFiles, 'Procedure');
-        let argImplementations = this.findImplementingClasses(sourceFiles, 'Arguments');
+        let argImplementations = this.findImplementingClasses(sourceFiles, 'Arguments')
+            
+        var argsBase = sourceFiles
+            .map(file => file.getClasses())
+            .reduce((flat, arr) => flat.concat(arr), new Array<ClassDeclaration>())
+            .find(c => c.getName() === 'Arguments');
+
+        argImplementations.push(argsBase);
 
         for (let implementation of procImplementations) {
 
@@ -52,10 +61,8 @@ export class ProcedureCompiler {
             internals.forEach(x => source.insertText(source.getEnd(), x));
 
             source.addClass(proc.argumentsClass.getStructure());
-
-            source.insertText(source.getEnd(), proc.getArgumentAssignments());
-
             source.addClass(proc.procedureClass.getStructure());
+
             source.insertText(source.getEnd(), proc.getRunStatement());
 
             source.formatText({ convertTabsToSpaces: true, indentStyle: ts.IndentStyle.Smart });
@@ -77,6 +84,7 @@ export class ProcedureCompiler {
                 `create procedure ${proc.getName()}(${argSql})`,
                 '\treturns variant',
                 '\tlanguage javascript',
+                `\texecute as ${Rights[proc.rights]}`,
                 '\tas',
                 '$$',
                 `${procText}`,
@@ -85,8 +93,6 @@ export class ProcedureCompiler {
             writeFileSync(`built/${proc.getName()}.sql`, procSql);
 
             console.log(`Generated procedure ${proc.getName()} `);
-            // console.log(procText);
-            // generate procedure surroundings
         }
     }
 
