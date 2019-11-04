@@ -86,16 +86,53 @@ Spoiler: you can. These 3 lines do the exact same thing as the 7 lines (not coun
 # Introducing SnowProc
 Catchy name, I know. Super-duper creative. So, what is it? The short summary is that SnowProc is a Typescript library/framework that enables you to define stored procedures for Snowflake using nothing but Typescript. SnowProc offers helpful classes and abstractions to reduce the amount of boilerplate you need to write in order to concisely express your logic. 
 
+## Directory structure
+```
+root
+ ├─────built           output for compiled procedures
+ |
+ ├─────lib             snowproc library
+ │     ├───compiler    
+ │     ├───core        snowflakeclient, queryresult
+ │     ├───internal
+ │     └───procedure   procedure, arguments
+ |
+ └─────proc            define your procedures here
+```
+
+## Highlights
+
+Some highlights: 
+* QueryResult mimics the behavior of an array, allowing you to iterate over rows like you would with a normal array.
+* QueryResult remains virtual for as long as possible, meaning iterating and using forEach() only loads one row simultaneously
+* QueryResult can be generic (defaults to `any`), allowing you to map query results to statically typed classes
+* SnowflakeClient has shortcut-functions to switch to a different role, database or schema
+* SnowflakeClient provides `executeAs(sql, role)` to execute a SQL-statement using a different role without altering the entire session
+* Procedure arguments are defined in an Arguments-class, allowing you to use statically typed procedure arguments 
+
 ## Defining a procedure
-As an example, here's a procedure that assigns a role to users with a certain text in their comment-field (from SHOW USERS). During the procedure we have to execute statements using different roles. Kind of contrived but it works well enough as an example. It takes two parameters of type string, and returns an object containing the roleName-parameter and the users it was assigned to. 
+```typescript
+export class ProcArgs extends Arguments {
+    stringArg: string;
+    roleName: string;
+}
 
+export class DemoProcedure extends Procedure {
+    args: ProcArgs; // Declare type of Arguments-class, compiler will provide an instance
+    rights =  Rights.Caller; // Define if procedure is called with caller's or owner's rights
 
-### Arguments
+    run = () => {
+        // write procedure logic here
+    }
+}
+```
+
+## Arguments
 To define and use parameters, create a class that inherits from `Arguments`. Change type of the args-property of `Procedure` to type of the args-class. Access them in `run()` using `this.args`. 
 
 ```typescript
 export class ProcArgs extends Arguments {
-    groupName: string;
+    stringArg: string;
     roleName: string;
 }
 
@@ -108,8 +145,8 @@ export class GrantRoleToGroup extends Procedure {
 }
 ```
 
-### Interacting with Snowflake
-Interaction with Snowflake is provided by the SnowflakeClient class. Feel free to create as many instances as you like, they are stateless and refer to the same static `snowflake`-object provided by the environment.
+## Interacting with Snowflake
+Interaction with Snowflake is provided by the SnowflakeClient class. Feel free to create as many instances as you like, they are stateless and refer to the same static `snowflake`-object provided by the environment. A notable missing feature in this initial release are parameterized SQL-statements. 
 
 ```typescript
 class Database {
@@ -132,8 +169,37 @@ export class GrantRoleToGroup extends Procedure {
 }
 ```
 
+## Interacting with QueryResult<T>
+QueryResult is SnowProc's adaptation of Snowflake's ResultSet-object.
 
-### End result
+```typescript
+        const client = new SnowflakeClient();
+        const sql = 'show databases';
+        
+        let results = client.execute(sql);
+
+        // filter mimics Array's filter, but only one filter can be applied to a resultset. 
+        results
+            .filter(row => row.somecolumn === 'somevalue') // applies filter and returns the QueryResult for further chaining
+            .filter(row => row.othercol === 'othervalue'); // only this filter is applied;
+
+        for (let row of results) {
+            // do stuff
+            // only holds one row into memory at a time
+        }
+
+        const arr = results.materialize(); // Loads all rows into memory, returns an array.
+        const mapped = results.map(row => row.somecolumn); // Mimics Array.map(), equivalent to calling .materialize().map(row => row.somecolumn);
+
+        results.forEach(row => {
+            // do stuff
+        });
+```
+
+
+## Complete example
+As an example, here's a procedure that assigns a role to users with a certain text in their comment-field (from SHOW USERS). During the procedure we have to execute statements using different roles. Kind of contrived but as an example it'll do just fine. It takes two parameters of type string, and returns an object containing the roleName-parameter and the users it was assigned to. 
+
 ```typescript
 import { Procedure } from "../lib/procedure/Procedure";
 import { SnowflakeClient } from "../lib/core/SnowflakeClient";
@@ -169,7 +235,10 @@ export class GrantRoleToGroup extends Procedure {
 }
 ```
 
-## Compilation process
+## Building process
+
+To start the build, open a terminal in the root of the directory and execute build.ps1
+
 The compilation process is as follows:
 1. SnowProc looks for classes that inherit from Procedure and Arguments
 2. Generate additional code for running in Snowflake
@@ -180,44 +249,16 @@ The compilation process is as follows:
 7. Profit
 
 
-## 
+# Future
+So as a first draft, this is more than sufficient. However, the current implementation of SnowProc requires working in the same base directory. Ideally, I'd provide SnowProc and its compiler as an NPM-package. This is certainly where I'm headed but I wanted to get this out there first, to avoid working on something until the end of time without ever releasing it.
 
-Some highlights: 
-* QueryResult mimics the behavior of an array, allowing you to iterate over rows like you would with a normal array.
-* QueryResult remains virtual for as long as possible, meaning iterating and using forEach() only loads one row simultaneously
-* QueryResult can be generic (defaults to `any`), allowing you to map query results to statically typed classes
-* SnowflakeClient has shortcut-functions to switch to a different role, database or schema
-* SnowflakeClient provides `executeAs(sql, role)` to execute a SQL-statement using a different role without altering the entire session
-* Procedure arguments are defined in an Arguments-class, allowing you to use statically typed procedure arguments 
+Furthermore, one feature that definitely needs to be implemented is parameterized execution of queries. Currently highest on the list. 
 
-## Example
-```typescript
-import { Procedure } from "../lib/procedure/Procedure";
-import { SnowflakeClient } from "../lib/core/SnowflakeClient";
-import { Arguments } from "../lib/procedure/Arguments";
-
-export class TestArguments extends Arguments {
-
-}
-
-export class TestProcedure extends Procedure {
-
-    args: TestArguments;
-
-    run = () : Array<string> => new SnowflakeClient() // create new snowflake client
-            .execute('select first_name, last_name from people') // execute sql query and return QueryResult<any>
-            .map(p => `${p.first_name} ${p.last_name}`); 
-}
-```
-
-
-## Future
-- Execute with parameters
-- Session variables
+Here are some ideas I'm currently debating on implementing. 
+- Shortcuts for interacting with session variables
 - Introduce extended `Statement`-object
 - Build object model for Snowflake, i.e. Account, Database, Warehouse, User. Further abstraction.
 
 ## Current limitations
-- QueryResult can only be materialized once
+- QueryResult can only be materialized/looped through once
     - Possible solution: use resultscan of query id when next() returns false
-- Procedure must have arguments defined even if unused
