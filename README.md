@@ -1,4 +1,24 @@
-# Stored Procedures in Snowflake
+<!-- vscode-markdown-toc -->
+* 1. [Stored Procedures in Snowflake](#StoredProceduresinSnowflake)
+* 2. [SnowProc](#SnowProc)
+	* 2.1. [Directory structure](#Directorystructure)
+	* 2.2. [Highlights](#Highlights)
+	* 2.3. [Defining a procedure](#Definingaprocedure)
+	* 2.4. [Arguments](#Arguments)
+	* 2.5. [Interacting with Snowflake](#InteractingwithSnowflake)
+	* 2.6. [Interacting with QueryResult<T>](#InteractingwithQueryResultT)
+	* 2.7. [Complete example](#Completeexample)
+	* 2.8. [Building process](#Buildingprocess)
+* 3. [Future](#Future)
+* 4. [Current limitations](#Currentlimitations)
+
+<!-- vscode-markdown-toc-config
+	numbering=true
+	autoSave=true
+	/vscode-markdown-toc-config -->
+<!-- /vscode-markdown-toc -->
+
+##  1. <a name='StoredProceduresinSnowflake'></a>Stored Procedures in Snowflake 
 
 Do you like stored procedures? I don't, to be completely honest. It's not the concept that bothers me, but rather the way most database platforms implement said concept: they are written in SQL. Now, SQL is a great language for querying databases and joining tables. But just as a fork isn't the most efficient way to eat soup, SQL may not be the best choice for anything that isn't querying. The scarcity of ways to avoid writing duplicate code and being overly verbose lead to - wait for it - duplicate, overly verbose code that waters down the logic it is supposed to express.
 
@@ -83,7 +103,7 @@ return new SnowflakeClient()
 
 Spoiler: you can. These 3 lines do the exact same thing as the 7 lines (not counting whitespace) we started out with. But how?
 
-# Introducing SnowProc
+##  2. <a name='SnowProc'></a>SnowProc
 Catchy name, I know. Super-duper creative. So, what is it? The short summary is that SnowProc is a Typescript library/framework that enables you to define stored procedures for Snowflake using nothing but Typescript. SnowProc offers helpful classes and abstractions to reduce the amount of boilerplate you need to write in order to concisely express your logic. Ultimately, SnowProc compiles your Typescript-code to JavaScript that Snowflake understands and wraps it in a DML-statement.
 
 The compiled result ends up looking like this:
@@ -111,7 +131,7 @@ return proc.run();
 $$;
 ```
 
-## Directory structure
+###  2.1. <a name='Directorystructure'></a>Directory structure
 ```
 root
  ├─────built           output for compiled procedures
@@ -125,7 +145,7 @@ root
  └─────proc            define your procedures here
 ```
 
-## Highlights
+###  2.2. <a name='Highlights'></a>Highlights
 
 Some highlights: 
 * QueryResult mimics the behavior of an array, allowing you to iterate over rows like you would with a normal array.
@@ -135,7 +155,7 @@ Some highlights:
 * SnowflakeClient provides `executeAs(sql, role)` to execute a SQL-statement using a different role without altering the entire session
 * Procedure arguments are defined in an Arguments-class, allowing you to use statically typed procedure arguments 
 
-## Defining a procedure
+###  2.3. <a name='Definingaprocedure'></a>Defining a procedure
 ```typescript
 export class ProcArgs extends Arguments {
     stringArg: string;
@@ -152,7 +172,7 @@ export class DemoProcedure extends Procedure {
 }
 ```
 
-## Arguments
+###  2.4. <a name='Arguments'></a>Arguments
 To define and use parameters, create a class that inherits from `Arguments`. Change type of the args-property of `Procedure` to type of the args-class. Access them in `run()` using `this.args`. 
 
 ```typescript
@@ -170,7 +190,7 @@ export class GrantRoleToGroup extends Procedure {
 }
 ```
 
-## Interacting with Snowflake
+###  2.5. <a name='InteractingwithSnowflake'></a>Interacting with Snowflake
 Interaction with Snowflake is provided by the SnowflakeClient class. Feel free to create as many instances as you like, they are stateless and refer to the same static `snowflake`-object provided by the environment. A notable missing feature in this initial release are parameterized SQL-statements. 
 
 ```typescript
@@ -194,7 +214,7 @@ export class GrantRoleToGroup extends Procedure {
 }
 ```
 
-## Interacting with QueryResult<T>
+###  2.6. <a name='InteractingwithQueryResultT'></a>Interacting with QueryResult<T>
 QueryResult is SnowProc's adaptation of Snowflake's ResultSet-object.
 
 ```typescript
@@ -222,7 +242,7 @@ QueryResult is SnowProc's adaptation of Snowflake's ResultSet-object.
 ```
 
 
-## Complete example
+###  2.7. <a name='Completeexample'></a>Complete example
 As an example, here's a procedure that assigns a role to users with a certain text in their comment-field (from SHOW USERS). During the procedure we have to execute statements using different roles. Kind of contrived but as an example it'll do just fine. It takes two parameters of type string, and returns an object containing the roleName-parameter and the users it was assigned to. 
 
 ```typescript
@@ -260,7 +280,7 @@ export class GrantRoleToGroup extends Procedure {
 }
 ```
 
-## Building process
+###  2.8. <a name='Buildingprocess'></a>Building process
 
 To start the build, open a terminal in the root of the directory and execute build.ps1
 
@@ -274,7 +294,7 @@ The compilation process is as follows:
 7. Profit
 
 
-# Future
+##  3. <a name='Future'></a>Future
 So as a first draft, this is more than sufficient. However, the current implementation of SnowProc requires working in the same base directory. Ideally, I'd provide SnowProc and its compiler as an NPM-package. This is certainly where I'm headed but I wanted to get this out there first, to avoid working on something until the end of time without ever releasing it.
 
 Furthermore, one feature that definitely needs to be implemented is parameterized execution of queries. Currently highest on the list. 
@@ -284,6 +304,6 @@ Here are some ideas I'm currently debating on implementing.
 - Introduce extended `Statement`-object
 - Build object model for Snowflake, i.e. Account, Database, Warehouse, User. Further abstraction.
 
-## Current limitations
+##  4. <a name='Currentlimitations'></a>Current limitations
 - QueryResult can only be materialized/looped through once
     - Possible solution: use resultscan of query id when next() returns false
