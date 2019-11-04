@@ -84,7 +84,32 @@ return new SnowflakeClient()
 Spoiler: you can. These 3 lines do the exact same thing as the 7 lines (not counting whitespace) we started out with. But how?
 
 # Introducing SnowProc
-Catchy name, I know. Super-duper creative. So, what is it? The short summary is that SnowProc is a Typescript library/framework that enables you to define stored procedures for Snowflake using nothing but Typescript. SnowProc offers helpful classes and abstractions to reduce the amount of boilerplate you need to write in order to concisely express your logic. 
+Catchy name, I know. Super-duper creative. So, what is it? The short summary is that SnowProc is a Typescript library/framework that enables you to define stored procedures for Snowflake using nothing but Typescript. SnowProc offers helpful classes and abstractions to reduce the amount of boilerplate you need to write in order to concisely express your logic. Ultimately, SnowProc compiles your Typescript-code to JavaScript that Snowflake understands and wraps it in a DML-statement.
+
+The compiled result ends up looking like this:
+```javascript
+create procedure SimpleTest()
+	returns variant
+	language javascript
+	execute as Owner
+	as
+$$
+// a lot of boilerplate you don't need to write
+class Arguments {
+}
+class SimpleTest extends Procedure {
+    constructor() {
+        super(...arguments);
+        this.run = () => {
+            // your code
+        };
+    }
+}
+const proc = new SimpleTest();
+proc.args = new Arguments();
+return proc.run();
+$$;
+```
 
 ## Directory structure
 ```
