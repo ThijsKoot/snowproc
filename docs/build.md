@@ -11,6 +11,34 @@ Will be made available as a Node-package in the future.
 ## Build
 To start the build, open a terminal in the root of the directory and execute build.ps1. The generated procedures will be output to the `./built` folder.
 
+A compiled procedure will look like this:
+
+```javascript
+create procedure SimpleTest()
+	returns variant
+	language javascript
+	execute as Owner
+	as
+$$
+// a lot of boilerplate you don't need to write
+class Arguments {
+}
+class SimpleTest extends Procedure {
+    constructor() {
+        super(...arguments);
+        this.run = () => {
+            // your code
+        };
+    }
+}
+const proc = new SimpleTest();
+proc.args = new Arguments();
+return proc.run();
+$$;
+```
+
+### Compiler steps
+
 The compilation process is as follows:
 1. SnowProc looks for classes that inherit from Procedure and Arguments
 2. Generate additional code for running in Snowflake

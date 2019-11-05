@@ -42,8 +42,31 @@ export class DemoProcedure extends Procedure {
 
 ### Building
 
-To start the build, open a terminal in the root of the directory and execute build.ps1. The generated procedures will be output to the `./built` folder.
+To start the build, open a terminal in the root of the directory and execute build.ps1. The generated procedures will be output to the `./built` folder. A compiled procedure will look like this:
 
+```javascript
+create procedure SimpleTest()
+	returns variant
+	language javascript
+	execute as Owner
+	as
+$$
+// a lot of boilerplate you don't need to write
+class Arguments {
+}
+class SimpleTest extends Procedure {
+    constructor() {
+        super(...arguments);
+        this.run = () => {
+            // your code
+        };
+    }
+}
+const proc = new SimpleTest();
+proc.args = new Arguments();
+return proc.run();
+$$;
+```
 
 ### Current limitations
 - Parameterized queries not supported as of yet
