@@ -1,7 +1,4 @@
-import { Procedure } from "../lib/procedure/Procedure";
-import { SnowflakeClient } from "../lib/core/SnowflakeClient";
-import { Rights } from "../lib/procedure/Rights";
-import { Arguments } from "../lib/procedure/Arguments";
+import { Procedure, Arguments, Rights, SnowflakeClient } from "snowproc";
 
 export class ProcArgs extends Arguments {
     groupName: string;

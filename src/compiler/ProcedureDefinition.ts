@@ -6,11 +6,17 @@ export class ProcedureDefinition {
 
     constructor(procedureClass: ClassDeclaration, argClasses: ClassDeclaration[]) {
         this.procedureClass = procedureClass;
+
         this.argumentsClass = argClasses.find(a => a.getName() === this.getArgumentClassName());
-
-        const rightsKey = this.getPropertyValue('rights').split('.')[1]; // Output from getPropertyValue is EnumType.Value for enums
-
-        this.rights = Rights[rightsKey];
+        
+        // TODO: workaround for properties of baseclass not having an initializer...
+        try{
+            const rightsKey = this.getPropertyValue('rights').split('.')[1]; // Output from getPropertyValue is EnumType.Value for enums
+            this.rights = Rights[rightsKey];
+        }
+        catch(error) {
+            this.rights = Rights.Owner;
+        }
     }
 
     private getPropertyValue = (name: string) => {

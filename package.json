@@ -1,12 +1,17 @@
 {
-  "name": "snowflakeproc",
+  "name": "snowproc",
   "version": "1.0.0",
-  "description": "",
-  "main": "app.js",
+  "description": "Typescript-framework for stored procedures in Snowflake",
+  "main": "dist/index.js",
   "dependencies": {
+    "@types/argparse": "^1.0.36",
+    "@types/node": "^12.12.6",
+    "argparse": "^1.0.10",
+    "find-node-modules": "^2.0.0",
     "fs": "^0.0.1-security",
     "glob": "^7.1.5",
     "process": "^0.11.10",
+    "shelljs": "^0.8.3",
     "ts-morph": "^4.3.2",
     "typescript": "^3.6.4",
     "typescript-compiler": "^1.4.1-2"
@@ -18,8 +23,19 @@
     "typedoc-plugin-markdown": "^2.2.11"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc --build src/tsconfig.json"
   },
-  "author": "",
-  "license": "ISC"
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thijskoot/snowproc.git"
+  },
+  "author": "Thijs Koot",
+  "license": "ISC",
+  "bin": {
+    "snowproc-compile": "dist/scripts/compile.js",
+    "snowproc-new": "dist/scripts/new.js"
+  },
+  "readme": "README.md"
 }

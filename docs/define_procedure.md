@@ -1,8 +1,7 @@
 ## General layout
 
 ```typescript
-import { Procedure } from "../lib/procedure/Procedure";
-import { Arguments } from "../lib/procedure/Arguments";
+import { Procedure, SnowflakeClient, Rights, Arguments } from "snowproc";
 
 export class ProcArgs extends Arguments {
     stringArg: string;
@@ -46,13 +45,9 @@ export class GrantRoleToGroup extends Procedure {
 ### Directory structure
 ```
 root
- ├─────built           output for compiled procedures
+ ├────dist            Default output directory for compiled procedures
  |
- ├─────lib             snowproc library
- │     ├───compiler    
- │     ├───core        snowflakeclient, queryresult
- │     ├───internal
- │     └───procedure   procedure, arguments
+ ├────src             define your procedures here
  |
- └─────proc            define your procedures here
+ └────tsconfig.json   Typescript configuration
 ```

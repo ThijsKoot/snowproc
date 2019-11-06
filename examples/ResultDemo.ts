@@ -1,7 +1,4 @@
-import { Procedure } from "../lib/procedure/Procedure";
-import { Arguments } from "../lib/procedure/Arguments";
-import { SnowflakeClient } from "../lib/core/SnowflakeClient";
-import { strict } from "assert";
+import { Procedure, SnowflakeClient } from "snowproc";
 
 class ResultDemo extends Procedure {
    
