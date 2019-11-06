@@ -1,15 +1,15 @@
 {
     "compilerOptions": {
-        "outDir": "./built",
+        "outDir": "../dist",
         "target": "es6",
         "moduleResolution": "node",
         "module": "commonjs",
-        "composite": true
+        "composite": true,
+        "declaration": true
     },
     "include": [
-        "lib/**/*",
-        "proc/**/*"
+       "./**/*"
     ],
+    "exclude": ["node_modules"],
     "references": [],
-    
 }

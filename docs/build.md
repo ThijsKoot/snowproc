@@ -1,15 +1,21 @@
 ## Install
-Clone this repository, run `npm install` and start developing!
+Install: 
 ```
-    git clone https://github.com/ThijsKoot/snowproc.git
-    cd snowproc
-    npm install
+    npm install snowproc
 ```
 
-Will be made available as a Node-package in the future. 
+Scaffold a new project:
+```
+    npx snowproc-new
+```
 
 ## Build
-To start the build, open a terminal in the root of the directory and execute build.ps1. The generated procedures will be output to the `./built` folder.
+Run:
+```
+npx snowproc-compile
+```
+
+Output will be located in the directory specified in tsconfig.json (default: dist).
 
 A compiled procedure will look like this:
 

@@ -7,19 +7,22 @@ Compiles down to native JavaScript and creates a DML-statement.
 
 Documentation and examples in the [wiki](https://github.com/thijskoot/SnowProc/wiki).
 
-### Installing SnowProc
-
-Clone this repository, run `npm install` and start developing!
+### Installation and setup
+Install: 
 ```
-    git clone https://github.com/ThijsKoot/snowproc.git
-    cd snowproc
-    npm install
+    npm install snowproc
 ```
 
-Will be made available as a Node-package in the future.
+Scaffold a new project:
+```
+    npx snowproc-new
+```
+
 
 ### Example
 ```typescript
+import { Arguments, Procedure, SnowflakeClient } from 'snowproc';
+
 export class ProcArgs extends Arguments {
     stringArg: string;
     dateArg: Date;
@@ -42,7 +45,12 @@ export class DemoProcedure extends Procedure {
 
 ### Building
 
-To start the build, open a terminal in the root of the directory and execute build.ps1. The generated procedures will be output to the `./built` folder. A compiled procedure will look like this:
+Compile with:
+```
+npx snowproc-compile
+```
+
+Output will be located in the directory specified in tsconfig.json (default: dist)
 
 ```javascript
 create procedure SimpleTest()

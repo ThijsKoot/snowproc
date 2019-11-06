@@ -5,8 +5,31 @@ import { writeFile, writeFileSync } from "fs";
 import { TypeMap } from "./Typemap";
 import * as fs from 'fs';
 import { Rights } from "../procedure/Rights";
+import shell = require('shelljs');
+import * as path from 'path';
+import * as os from "os";
 
 export class ProcedureCompiler {
+    constructor() {
+        
+    }
+
+    /**
+     * Adds SnowProc library files to sourcefile
+     * @param sourceFile SourceFile to add lib files to
+     * @param libLocation Location of lib files
+     */
+    private addLibFiles(sourceFile: SourceFile, libLocation: string) {
+        for (let item of ['internal', 'core', 'procedure']) {
+            const folder = path.join(libLocation, item);
+
+            fs.readdirSync(folder)
+                .filter(f => !f.endsWith('.d.ts'))
+                .map(f => path.join(folder, f))
+                .map(f => `${fs.readFileSync(f, 'utf-8')}\n\n`)
+                .forEach(x => sourceFile.insertText(sourceFile.getEnd(), x));
+        }
+    }
 
     findImplementingClasses = (sourcefiles: SourceFile[], baseClass: string) =>
         sourcefiles.map(file => file.getClasses())
@@ -14,7 +37,8 @@ export class ProcedureCompiler {
             .filter(c => c.getBaseClass() !== undefined
                 && c.getBaseClass().getName() === baseClass);
 
-    compile(tsconfig: string) {
+    compile(tsconfig: string, moduleRoot: string) {
+
         // initialize
         const sourceProject = new Project({
             manipulationSettings: {},
@@ -22,24 +46,23 @@ export class ProcedureCompiler {
             tsConfigFilePath: tsconfig
         });
 
+        const outDir = sourceProject.getCompilerOptions().outDir;
+        const tmpDir = path.join(os.tmpdir(), 'snowproc');
+        const libDir = path.join(moduleRoot, 'src');
+
+        [outDir, tmpDir]
+            .filter(d => !fs.existsSync(d))
+            .forEach(d => fs.mkdirSync(d));
+
+        const argumentsFile = path.join(libDir, 'procedure', 'Arguments.ts'); // to add argbase to argImplementations
+        sourceProject.addExistingSourceFile(argumentsFile);
+
         let sourceFiles = sourceProject.getSourceFiles();
-
-        let internals = new Array<string>();
-
-        for (let item of ['internal', 'core', 'procedure']) {
-            const folder = `lib/${item}`;
-
-            fs.readdirSync(folder)
-                .filter(f => !f.endsWith('.d.ts'))
-                .map(f => `${folder}/${f}`)
-                .map(f => `${fs.readFileSync(f, 'utf-8')}\n\n`)
-                .forEach(f => internals.push(f));
-        }
 
         // find implementations of procedure classes
         let procImplementations = this.findImplementingClasses(sourceFiles, 'Procedure');
-        let argImplementations = this.findImplementingClasses(sourceFiles, 'Arguments')
-            
+        let argImplementations = this.findImplementingClasses(sourceFiles, 'Arguments');
+        
         var argsBase = sourceFiles
             .map(file => file.getClasses())
             .reduce((flat, arr) => flat.concat(arr), new Array<ClassDeclaration>())
@@ -56,9 +79,11 @@ export class ProcedureCompiler {
 
             let proc = new ProcedureDefinition(implementation, argImplementations);
 
-            let source = project.createSourceFile(`./tmp/${proc.getName()}.ts`);
+            const tmpFilePath = path.join(tmpDir, `${proc.getName()}.ts`);
 
-            internals.forEach(x => source.insertText(source.getEnd(), x));
+            let source = project.createSourceFile(tmpFilePath);
+
+            this.addLibFiles(source, libDir);
 
             source.addClass(proc.argumentsClass.getStructure());
             source.addClass(proc.procedureClass.getStructure());
@@ -76,6 +101,7 @@ export class ProcedureCompiler {
             });
 
             var procText = emitted.getFiles()[0].text;
+
             let argSql = proc.getArgumentList()
                 .map(a => `${a.name.toUpperCase()} ${TypeMap[a.type]}`)
                 .join(', ');
@@ -90,10 +116,14 @@ export class ProcedureCompiler {
                 `${procText}`,
                 '$$;'].join('\n');
 
-            writeFileSync(`built/${proc.getName()}.sql`, procSql);
+            const outFile = path.join(outDir, `${proc.getName()}.sql`);
+            
+            writeFileSync(outFile, procSql);
 
             console.log(`Generated procedure ${proc.getName()} `);
         }
+
+        fs.rmdirSync(tmpDir);
     }
 
     visitSourceFile(sourceFile: ts.SourceFile, context: ts.TransformationContext, visitNode: (node: ts.Node) => ts.Node) {

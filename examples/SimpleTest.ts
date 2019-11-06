@@ -1,5 +1,4 @@
-import { Procedure } from "../lib/procedure/Procedure";
-import { Arguments } from "../lib/procedure/Arguments";
+import { Procedure, Arguments } from "snowproc";
 
 class SimpleTestArgs extends Arguments {
     number: number;

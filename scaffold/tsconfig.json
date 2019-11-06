@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",   
+    "outDir": "./dist",
+    "moduleResolution": "node"
+  },
+  "include": [
+    "src/**/*"
+    ]
+}

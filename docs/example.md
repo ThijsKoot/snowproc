@@ -2,10 +2,7 @@
 As an example, here's a procedure that assigns a role to users with a certain text in their comment-field (from SHOW USERS). During the procedure we have to execute statements using different roles. Kind of contrived but as an example it'll do just fine. It takes two parameters of type string, and returns an object containing the roleName-parameter and the users it was assigned to. 
 
 ```typescript
-import { Procedure } from "../lib/procedure/Procedure";
-import { SnowflakeClient } from "../lib/core/SnowflakeClient";
-import { Rights } from "../lib/procedure/Rights";
-import { Arguments } from "../lib/procedure/Arguments";
+import { Procedure, SnowflakeClient, Rights, Arguments } from "snowproc";
 
 export class ProcArgs extends Arguments {
     groupName: string;

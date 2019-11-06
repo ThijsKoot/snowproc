@@ -1,6 +1,5 @@
 import { Statement } from "../internal/Statement";
 import { ResultSet } from "../internal/ResultSet";
-import { stringify } from "querystring";
 
 interface IteratorResult<T> {
     done: boolean;
