@@ -1,6 +1,6 @@
 SnowProc
 =======
-
+![npm](https://img.shields.io/npm/dt/snowproc)
 Stored procedures for Snowflake written in Typescript. Extends the native JS APIs provided by Snowflake and provides a more streamlined, less error-prone method of writing stored procedures. SnowProc's helpful classes and abstractions reduce the amount of boilerplate you need to write in order to concisely express your logic. 
 
 Compiles down to native JavaScript and creates a DML-statement.
