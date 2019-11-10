@@ -1,30 +1,37 @@
-import { ClassDeclaration, ts } from 'ts-morph'
+import { ClassDeclaration, ts, ArrowFunction } from 'ts-morph'
 import { Argument } from './Argument';
 import { Rights } from '../procedure/Rights';
 
 export class ProcedureDefinition {
 
-    constructor(procedureClass: ClassDeclaration, argClasses: ClassDeclaration[]) {
+    constructor(procedureClass: ClassDeclaration) {
         this.procedureClass = procedureClass;
 
-        this.argumentsClass = argClasses.find(a => a.getName() === this.getArgumentClassName());
-        
-        // TODO: workaround for properties of baseclass not having an initializer...
-        try{
-            const rightsKey = this.getPropertyValue('rights').split('.')[1]; // Output from getPropertyValue is EnumType.Value for enums
-            this.rights = Rights[rightsKey];
-        }
-        catch(error) {
-            this.rights = Rights.Owner;
-        }
+        this.rights = this.getProcedureRights();
+        this.argumentList = this.getArgumentList();
+
+        this.argsParameter = this.argumentList
+            .map(arg => `${arg.name} : ${arg.name.toUpperCase()}`)
+            .join(',');
     }
 
-    private getPropertyValue = (name: string) => {
+    private getProcedureRights = () => {
         // try to get override first, then fall back to base class
-        const prop = this.procedureClass.getInstanceProperty(name)
-            || this.procedureClass.getBaseClass().getInstanceProperty(name);
+        // TODO: workaround for properties of baseclass not having an initializer...
+        try {
+            const prop = this.procedureClass.getInstanceProperty('rights')
+                || this.procedureClass.getBaseClass().getInstanceProperty('rights');
 
-        return (prop.compilerNode as ts.PropertyDeclaration).initializer.getText();
+            const rightsKey = (prop.compilerNode as ts.PropertyDeclaration)
+                .initializer
+                .getText()
+                .split('.')[1]; // Output is EnumType.Value for enums
+
+            return Rights[rightsKey];
+        }
+        catch (error) {
+            return Rights.Owner;
+        }
     }
 
     procedureClass: ClassDeclaration;
@@ -36,40 +43,41 @@ export class ProcedureDefinition {
 
     argumentList: Argument[];
     argumentClassName: string;
+    argsParameter: string;
 
     getName = () => this.procedureClass.getName();
 
-    getArgumentList = () => this.argumentsClass
-        .getMembers()
-        .map(m => <Argument>{
-            name: m.getSymbol().getName(),
-            type: m.getType().getText()
-        });
+    getArgumentList = () => {
+        const run = this.procedureClass
+            .getProperty('run')
+            .getInitializer() as ArrowFunction;
 
-    getArgumentClassName = () => {
-        var member = this.procedureClass.getMember('args') 
-            || this.procedureClass.getBaseClass().getMember('args');
+        return run
+            .getParameter('args')
+            .getType()
+            .getProperties()
+            .map(prop => <Argument>{
+                name: prop.getName(),
+                type: prop.getDeclarations()[0]
+                    .getType()
+                    .getText()
+            });
+    }
 
-        return member.getType()
-            .compilerType
-            .symbol
-            .name;
+    getArgsParameter = () => {
+        this.argumentList
+            .map(arg => `${arg.name} : ${arg.name.toUpperCase()}`)
+            .join(',');
     }
 
     getRunStatement = () => [
         `const proc = new ${this.getName()}();`,
-        `proc.args = new ${this.getArgumentClassName()}();`,
-        this.getArgumentAssignments('proc.args'),
-        `return proc.run();`
+        `const args = {${this.argsParameter}};`,
+        `const client = new SnowflakeClient();`,
+        `return proc.run(client, args);`
     ].join('\n');
 
     getArgumentSql = () => this.getArgumentList()
         .map(arg => arg.getProcedureParameterSql())
         .join(', ');
-
-    getArgumentAssignments = (instanceName: string) => this.getArgumentList()
-        .map(arg => `declare const ${arg.name.toUpperCase()} : ${arg.type};
-                ${instanceName}.${arg.name} = ${arg.name.toUpperCase()};`)
-        .join('\n');
 }
-

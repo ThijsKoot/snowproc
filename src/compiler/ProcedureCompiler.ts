@@ -1,5 +1,5 @@
 
-import { Project, ts, ClassDeclaration, SourceFile } from "ts-morph";
+import { Project, ts, ClassDeclaration, SourceFile, ArrowFunction, TypeLiteralNode, PropertyDeclaration, PropertySignature } from "ts-morph";
 import { ProcedureDefinition } from "./ProcedureDefinition";
 import { writeFile, writeFileSync } from "fs";
 import { TypeMap } from "./Typemap";
@@ -11,7 +11,7 @@ import * as os from "os";
 
 export class ProcedureCompiler {
     constructor() {
-        
+
     }
 
     /**
@@ -37,8 +37,19 @@ export class ProcedureCompiler {
             .filter(c => c.getBaseClass() !== undefined
                 && c.getBaseClass().getName() === baseClass);
 
-    compile(tsconfig: string, moduleRoot: string) {
+    // new implementation:
+    // concat all sourcefiles
+    // create new project and add sourcefile
+    // foreach proc in newproj
+    // delete other procs
+    // add runstatement
+    // compile
+    // add surroundings
 
+    // procedure: 
+    // run = (client : sfclient, args : {inline defined or typed class}) => ...
+
+    compile(tsconfig: string, moduleRoot: string) {
         // initialize
         const sourceProject = new Project({
             manipulationSettings: {},
@@ -54,39 +65,45 @@ export class ProcedureCompiler {
             .filter(d => !fs.existsSync(d))
             .forEach(d => fs.mkdirSync(d));
 
-        const argumentsFile = path.join(libDir, 'procedure', 'Arguments.ts'); // to add argbase to argImplementations
-        sourceProject.addExistingSourceFile(argumentsFile);
-
         let sourceFiles = sourceProject.getSourceFiles();
 
+        let concatenated = sourceFiles.map(f => f.getText()).join('\n');
+
         // find implementations of procedure classes
-        let procImplementations = this.findImplementingClasses(sourceFiles, 'Procedure');
-        let argImplementations = this.findImplementingClasses(sourceFiles, 'Arguments');
-        
-        var argsBase = sourceFiles
-            .map(file => file.getClasses())
+        let procs = sourceFiles.map(file => file.getClasses())
             .reduce((flat, arr) => flat.concat(arr), new Array<ClassDeclaration>())
-            .find(c => c.getName() === 'Arguments');
+            .filter(c => c.getBaseClass() !== undefined
+                && c.getBaseClass().getName() === 'Procedure');
 
-        argImplementations.push(argsBase);
-
-        for (let implementation of procImplementations) {
+        for (let implementation of procs) {
 
             let project = new Project({
                 manipulationSettings: {},
                 compilerOptions: { target: ts.ScriptTarget.ES2019 }
             });
 
-            let proc = new ProcedureDefinition(implementation, argImplementations);
-
+            let proc = new ProcedureDefinition(implementation);
             const tmpFilePath = path.join(tmpDir, `${proc.getName()}.ts`);
-
             let source = project.createSourceFile(tmpFilePath);
 
             this.addLibFiles(source, libDir);
 
-            source.addClass(proc.argumentsClass.getStructure());
-            source.addClass(proc.procedureClass.getStructure());
+            source.insertText(0, concatenated);
+
+            for (let statement of source.getStatements()) {
+                const item = statement as ClassDeclaration;
+                
+                if(item.getStructure !== undefined) {
+
+                    const structure = item.getStructure();
+
+                    if (structure.extends !== undefined
+                        && structure.extends === 'Procedure'
+                        && structure.name !== proc.getName()) {
+                        source.removeStatement(statement.getChildIndex());
+                    }
+                }
+            }
 
             source.insertText(source.getEnd(), proc.getRunStatement());
 
@@ -117,7 +134,7 @@ export class ProcedureCompiler {
                 '$$;'].join('\n');
 
             const outFile = path.join(outDir, `${proc.getName()}.sql`);
-            
+
             writeFileSync(outFile, procSql);
 
             console.log(`Generated procedure ${proc.getName()} `);
