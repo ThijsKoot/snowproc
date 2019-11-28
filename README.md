@@ -1,6 +1,6 @@
 SnowProc
 =======
-
+![npm](https://img.shields.io/npm/dt/snowproc)
 Stored procedures for Snowflake written in Typescript. Extends the native JS APIs provided by Snowflake and provides a more streamlined, less error-prone method of writing stored procedures. SnowProc's helpful classes and abstractions reduce the amount of boilerplate you need to write in order to concisely express your logic. 
 
 Compiles down to native JavaScript and creates a DML-statement.
@@ -30,15 +30,14 @@ export class ProcArgs extends Arguments {
 }
 
 export class DemoProcedure extends Procedure {
-    args: ProcArgs;
     rights =  Rights.Caller;
 
-    run = () => {
+    run = (client, args : ProcArgs) => {
         var results = new SnowflakeClient()
             .execute('show databases')
             .materialize();
         
-        return <any>{queryResults: results, arguments: this.args}
+        return {queryResults: results, arguments: args}
     }
 }
 ```
@@ -53,7 +52,7 @@ npx snowproc-compile
 Output will be located in the directory specified in tsconfig.json (default: dist)
 
 ```javascript
-create procedure SimpleTest()
+create procedure SimpleTest(arg STRING)
 	returns variant
 	language javascript
 	execute as Owner
@@ -65,14 +64,15 @@ class Arguments {
 class SimpleTest extends Procedure {
     constructor() {
         super(...arguments);
-        this.run = () => {
+        this.run = (client, args) => {
             // your code
         };
     }
 }
 const proc = new SimpleTest();
-proc.args = new Arguments();
-return proc.run();
+const args = { arg: ARG };
+const client = new SnowflakeClient();
+return proc.run(client, args);
 $$;
 ```
 

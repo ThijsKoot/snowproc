@@ -4,10 +4,8 @@ class NewProcedureArguments extends Arguments {
 }
 
 class NewProcedure extends Procedure {
-    rights: Rights.Owner;
-    args: NewProcedureArguments;
+    rights = Rights.Owner;
     
-    run = () => {
-        const client = new SnowflakeClient();
+    run = (client: SnowflakeClient, args: NewProcedureArguments) => {
     }
 }

@@ -20,7 +20,7 @@ Output will be located in the directory specified in tsconfig.json (default: dis
 A compiled procedure will look like this:
 
 ```javascript
-create procedure SimpleTest()
+create procedure SimpleTest(arg STRING)
 	returns variant
 	language javascript
 	execute as Owner
@@ -32,14 +32,15 @@ class Arguments {
 class SimpleTest extends Procedure {
     constructor() {
         super(...arguments);
-        this.run = () => {
+        this.run = (client, args) => {
             // your code
         };
     }
 }
 const proc = new SimpleTest();
-proc.args = new Arguments();
-return proc.run();
+const args = { arg: ARG };
+const client = new SnowflakeClient();
+return proc.run(client, args);
 $$;
 ```
 

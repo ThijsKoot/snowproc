@@ -2,8 +2,7 @@ import { Procedure, SnowflakeClient } from "snowproc";
 
 class ResultDemo extends Procedure {
    
-    run = () => {
-        const client = new SnowflakeClient();
+    run = (client: SnowflakeClient, args) => {
         const sql = 'show databases';
         
         let results = client.execute(sql);

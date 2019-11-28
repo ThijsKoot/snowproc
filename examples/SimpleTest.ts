@@ -1,13 +1,7 @@
-import { Procedure, Arguments } from "snowproc";
-
-class SimpleTestArgs extends Arguments {
-    number: number;
-}
+import { SnowflakeClient, Procedure } from "snowproc";
 
 class SimpleTest extends Procedure {
-    args: SimpleTestArgs;
-    
-    run = () => {
-        return this.args.number;
+    run = (client: SnowflakeClient, args: {number: Number}) => {
+        return args.number;
     }
 }

@@ -1,17 +1,16 @@
 
-import { Project, ts, ClassDeclaration, SourceFile } from "ts-morph";
+import { Project, ts, ClassDeclaration, SourceFile, ArrowFunction, TypeLiteralNode, PropertyDeclaration, PropertySignature } from "ts-morph";
 import { ProcedureDefinition } from "./ProcedureDefinition";
-import { writeFile, writeFileSync } from "fs";
+import { writeFileSync } from "fs";
 import { TypeMap } from "./Typemap";
 import * as fs from 'fs';
 import { Rights } from "../procedure/Rights";
-import shell = require('shelljs');
 import * as path from 'path';
 import * as os from "os";
 
 export class ProcedureCompiler {
     constructor() {
-        
+
     }
 
     /**
@@ -37,8 +36,8 @@ export class ProcedureCompiler {
             .filter(c => c.getBaseClass() !== undefined
                 && c.getBaseClass().getName() === baseClass);
 
-    compile(tsconfig: string, moduleRoot: string) {
 
+    compile(tsconfig: string, moduleRoot: string) {
         // initialize
         const sourceProject = new Project({
             manipulationSettings: {},
@@ -50,45 +49,53 @@ export class ProcedureCompiler {
         const tmpDir = path.join(os.tmpdir(), 'snowproc');
         const libDir = path.join(moduleRoot, 'src');
 
+        // Create required directories if they don't exist
         [outDir, tmpDir]
             .filter(d => !fs.existsSync(d))
             .forEach(d => fs.mkdirSync(d));
 
-        const argumentsFile = path.join(libDir, 'procedure', 'Arguments.ts'); // to add argbase to argImplementations
-        sourceProject.addExistingSourceFile(argumentsFile);
-
         let sourceFiles = sourceProject.getSourceFiles();
 
-        // find implementations of procedure classes
-        let procImplementations = this.findImplementingClasses(sourceFiles, 'Procedure');
-        let argImplementations = this.findImplementingClasses(sourceFiles, 'Arguments');
-        
-        var argsBase = sourceFiles
-            .map(file => file.getClasses())
+        let concatenatedSource = sourceFiles.map(f => f.getText()).join('\n');
+
+        // find implementations of procedure classes in all source files
+        let procedureClasses = sourceFiles.map(file => file.getClasses())
             .reduce((flat, arr) => flat.concat(arr), new Array<ClassDeclaration>())
-            .find(c => c.getName() === 'Arguments');
+            .filter(c => c.getBaseClass() !== undefined
+                && c.getBaseClass().getName() === 'Procedure');
 
-        argImplementations.push(argsBase);
-
-        for (let implementation of procImplementations) {
+        for (let procedureClass of procedureClasses) {
 
             let project = new Project({
                 manipulationSettings: {},
                 compilerOptions: { target: ts.ScriptTarget.ES2019 }
             });
 
-            let proc = new ProcedureDefinition(implementation, argImplementations);
-
-            const tmpFilePath = path.join(tmpDir, `${proc.getName()}.ts`);
-
+            let procDefinition = new ProcedureDefinition(procedureClass);
+            const tmpFilePath = path.join(tmpDir, `${procDefinition.getName()}.ts`);
             let source = project.createSourceFile(tmpFilePath);
 
             this.addLibFiles(source, libDir);
 
-            source.addClass(proc.argumentsClass.getStructure());
-            source.addClass(proc.procedureClass.getStructure());
+            source.insertText(source.getEnd(), concatenatedSource);
 
-            source.insertText(source.getEnd(), proc.getRunStatement());
+            // Remove all other Procedures from new SourceFile
+            for (let statement of source.getStatements()) {
+                const item = statement as ClassDeclaration;
+                
+                if(item.getStructure !== undefined) {
+
+                    const structure = item.getStructure();
+
+                    if (structure.extends !== undefined
+                        && structure.extends === 'Procedure'
+                        && structure.name !== procDefinition.getName()) {
+                        source.removeStatement(statement.getChildIndex());
+                    }
+                }
+            }
+
+            source.insertText(source.getEnd(), procDefinition.getRunStatement());
 
             source.formatText({ convertTabsToSpaces: true, indentStyle: ts.IndentStyle.Smart });
 
@@ -102,25 +109,25 @@ export class ProcedureCompiler {
 
             var procText = emitted.getFiles()[0].text;
 
-            let argSql = proc.getArgumentList()
+            let argSql = procDefinition.getArgumentList()
                 .map(a => `${a.name.toUpperCase()} ${TypeMap[a.type]}`)
                 .join(', ');
 
             let procSql = [
-                `create procedure ${proc.getName()}(${argSql})`,
+                `create or replace procedure ${procDefinition.getName()}(${argSql})`,
                 '\treturns variant',
                 '\tlanguage javascript',
-                `\texecute as ${Rights[proc.rights]}`,
+                `\texecute as ${Rights[procDefinition.rights]}`,
                 '\tas',
                 '$$',
                 `${procText}`,
                 '$$;'].join('\n');
 
-            const outFile = path.join(outDir, `${proc.getName()}.sql`);
-            
+            const outFile = path.join(outDir, `${procDefinition.getName()}.sql`);
+
             writeFileSync(outFile, procSql);
 
-            console.log(`Generated procedure ${proc.getName()} `);
+            console.log(`Generated procedure ${procDefinition.getName()} `);
         }
 
         fs.rmdirSync(tmpDir);
@@ -135,7 +142,8 @@ export class ProcedureCompiler {
     }
 
     removeInvalidNodes(node: ts.Node) {
-        if (node.kind === ts.SyntaxKind.ExportKeyword || node.kind == ts.SyntaxKind.ImportDeclaration)
+        if (node.kind === ts.SyntaxKind.ExportKeyword 
+            || node.kind == ts.SyntaxKind.ImportDeclaration)
             return undefined;
         return node;
     }

@@ -1,5 +1,6 @@
 import { Arguments } from "./Arguments";
 import { Rights } from "./Rights";
+import { SnowflakeClient } from "../core/SnowflakeClient";
 
 export abstract class Procedure {
    
@@ -20,5 +21,5 @@ export abstract class Procedure {
     /**
      * @property Code that is run in procedure
      */
-    run : () => any;
+    run : (client: SnowflakeClient, args: any) => any;
 }

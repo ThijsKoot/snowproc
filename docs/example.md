@@ -11,15 +11,13 @@ export class ProcArgs extends Arguments {
 
 export class GrantRoleToGroup extends Procedure {
     rights = Rights.Caller; // Execute procedure as Caller
-    args: ProcArgs; // Declare type of Arguments-class, compiler will provide an instance
 
     // Define procedure logic
-    run = () => {
-        const client = new SnowflakeClient(); // Create Snowflake client
-        
+    run = (client: SnowflakeClient, args: ProcArgs) => {
+      
         const users = client
             .executeAs('show users', 'accountadmin') // Retrieve users as accountadmin
-            .filter(u => u.comment === this.args.groupName) // Filter retrieved results
+            .filter(u => u.comment === args.groupName) // Filter retrieved results
             .map(u => u.name); // Select username
 
         for(const user of users) {

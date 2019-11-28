@@ -28,15 +28,11 @@ export class StateManager {
     }
 
     restore(state?: State) {
-        state = state === undefined
-            ? this.state
-            : state;
-
-        for (const prop in state) {
-            if (state.hasOwnProperty(prop)) {
-                this.snowflake.execute(`use ${prop} ${this.state[prop]}`);
-            }
-        }
+        state = state || this.state;
+        
+        this.snowflake.execute(`use role ${state.role}`)
+        this.snowflake.execute(`use database ${state.database}`)
+        this.snowflake.execute(`use schema ${state.schema}`)
     }
 }
 
