@@ -16,9 +16,7 @@ export class QueryResult<T = any> implements IterableIterator<T> {
         return this
     }
 
-    private results: ResultSet;
     private _filter: (obj: T) => boolean;
-    private statement: Statement;
     private processedRows: number;
 
     /**
@@ -32,13 +30,19 @@ export class QueryResult<T = any> implements IterableIterator<T> {
     public rowCount: number;
     columns: Array<string>;
 
-    public constructor(internalResults: ResultSet, statement: Statement) {
-        this.results = internalResults;
-        this.statement = statement;
+    public constructor(
+        private internalResults: ResultSet,
+        private statement: Statement,
+        private type?: new () => T
+    ) {
         this.columns = this.loadColumns();
         this.rowCount = this.statement.getRowCount();
         this.queryId = statement.getQueryId();
     }
+
+    private getInstance = () => this.type === undefined
+        ? <T>{}
+        : new this.type();
 
     /**
      * Set filter condition to apply to this result set. 
@@ -52,8 +56,29 @@ export class QueryResult<T = any> implements IterableIterator<T> {
         return this;
     }
 
+    /**
+    * Loops through rows and returns first match for condition
+    * @example 
+    * const row = queryResult.find(example => example.subject === 'filter');
+    */
+    find(condition: (row: T) => boolean): T {
+        this._filter = condition;
 
-    public forEach(action: (row) => void): void {
+        // iterating already applies filter so the first row we get is the first filter hit
+        for (let row of this) {
+            return row;
+        }
+    }
+
+    /**
+     * Mimics Array.forEach(), executes an action for each row
+     * @param action action to execute for each row
+     * @example 
+     * client
+     *     .execute('show warehouses')
+     *     .forEach(row => doSomething(row))
+     */
+    public forEach(action: (row: T) => void): void {
         for (let row of this) {
             action(row);
         }
@@ -80,13 +105,12 @@ export class QueryResult<T = any> implements IterableIterator<T> {
             .filter(p => instance.hasOwnProperty(p))
             .find(p => p.toUpperCase() === col)
 
-        if (typeof instance !== typeof <any>{}) {
-            if (prop !== undefined) {
-                instance[prop] = this.results[col]
-            }
+        if (prop !== undefined) {
+            instance[prop] = this.internalResults[col]
         }
+
         else {
-            instance[col.toLowerCase()] = this.results[col];
+            instance[col.toLowerCase()] = this.internalResults[col];
         }
 
         return instance;
@@ -118,8 +142,10 @@ export class QueryResult<T = any> implements IterableIterator<T> {
      * @description Map columns from internal result set to an instance of T
      */
     private getRow() {
-        return this.columns.reduce<T>((row, col) => this.mapProperty(row, col), <T>{});
+        return this.columns.reduce<T>((row, col) => this.mapProperty(row, col), this.getInstance());
     }
+
+    private rowLimitReached = () => this.rowLimit !== undefined && this.processedRows === this.rowLimit;
 
     /**
      * @description implementation of iterator. Iterates until row limit is reached. 
@@ -128,15 +154,13 @@ export class QueryResult<T = any> implements IterableIterator<T> {
      * @returns IteratorResult<T> 
      */
     public next(): IteratorResult<T> {
-        const rowLimitReached = this.rowLimit !== undefined && this.processedRows === this.rowLimit;
-        if (!rowLimitReached && this.results.next()) {
-
+        if (!this.rowLimitReached() && this.internalResults.next()) {
             let currentRow = this.getRow();
 
             this.processedRows++;
 
-            if (this._filter !== undefined && this._filter(currentRow)) {
-                this.next(); // recurse until filter returns true
+            if (this._filter !== undefined && !this._filter(currentRow)) {
+                return this.next(); // recurse until filter returns true
             }
 
             this.currentRow = currentRow;
