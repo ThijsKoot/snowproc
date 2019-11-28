@@ -47,14 +47,20 @@ export class ProcedureDefinition {
 
     getName = () => this.procedureClass.getName();
 
+    getArgumentType = () => {
+        
+    }
+
     getArgumentList = () => {
         const run = this.procedureClass
             .getProperty('run')
             .getInitializer() as ArrowFunction;
 
-        return run
+        let argType = run
             .getParameter('args')
-            .getType()
+            .getType();
+
+        return argType
             .getProperties()
             .map(prop => <Argument>{
                 name: prop.getName(),
@@ -64,7 +70,7 @@ export class ProcedureDefinition {
             });
     }
 
-    getArgsParameter = () => {
+    getArgumentAssignments = () => {
         this.argumentList
             .map(arg => `${arg.name} : ${arg.name.toUpperCase()}`)
             .join(',');
